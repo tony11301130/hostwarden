@@ -88,7 +88,7 @@ func TestAutomaticGuestNetworkSeedAndNIC(t *testing.T) {
 		if original.NetworkConfig != "" || req.NetworkMAC == "" {
 			t.Fatal("must resolve a MAC without mutating the original config")
 		}
-		doc := parseVMX(buildVMX(req))
+		doc := parseVMX(buildVMX(req, upstreamVMProfile))
 		wantVMX(t, doc, "ethernet0.addressType", "static")
 		wantVMX(t, doc, "ethernet0.address", req.NetworkMAC)
 		if !strings.Contains(req.CloudInit.NetworkConfig, "macaddress: \""+req.NetworkMAC+"\"") {
@@ -144,7 +144,7 @@ func TestGuestNetworkDHCPAndRawConfigUnchanged(t *testing.T) {
 		if req.CloudInit != cfg || req.NetworkMAC != "" {
 			t.Fatal("DHCP/raw network config changed")
 		}
-		wantVMX(t, parseVMX(buildVMX(req)), "ethernet0.addressType", "generated")
+		wantVMX(t, parseVMX(buildVMX(req, upstreamVMProfile)), "ethernet0.addressType", "generated")
 	}
 	var req model.CreateVMRequest
 	if err := json.Unmarshal([]byte(`{"NetworkMAC":"injected","network_mac":"injected"}`), &req); err != nil || req.NetworkMAC != "" {
