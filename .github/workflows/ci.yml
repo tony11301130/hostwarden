@@ -23,6 +23,7 @@ jobs:
         run: |
           npm ci
           npx ng lint
+          npm run test:network
           npm run build
       - run: go vet ./...
       - run: go test ./...

@@ -228,7 +228,9 @@ export interface CloudInitConfig {
   ssh_authorized_keys?: string[];
   users?: { name: string; sudo?: string; shell?: string; password?: string; ssh_authorized_keys?: string[] }[];
   packages?: string[];
-  /** Raw user-data: when set it replaces everything above. */
+  /** NoCloud network-config, applied independently of user_data. */
+  network_config?: string;
+  /** Raw user-data: replaces generated user-data, but not network_config or metadata. */
   user_data?: string;
 }
 

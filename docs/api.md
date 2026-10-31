@@ -118,6 +118,8 @@ curl -X POST http://localhost:8080/api/v1/hosts/$HID/vms \
 
 With `"cloud_image": "cloud-images/rocky-9.vmdk"` the boot disk is cloned from that image, and an optional `cloud_init` object (`hostname`, `users`, `ssh_authorized_keys`, `packages`, `runcmd`, `write_files`, `network_config`, or a raw `user_data`) configures the guest on first boot.
 
+The cloud-image wizard's **Guest setup → Guest network** section defaults to DHCP. For static IPv4, enter the guest's interface name (for example `ens192` or `eth0`), address and subnet mask or CIDR prefix (`255.255.255.0`, `24` or `/24`); gateway and IPv4 DNS servers are optional. The interface name must match the cloud image, and a network adapter must be selected on the Hardware page. These settings produce a separate NoCloud v2 `cloud_init.network_config` YAML string, which is included even when raw `user_data` is supplied. Switching back to DHCP omits `network_config` and preserves cloud-init's default networking behavior. Settings apply on the new guest's first boot, not to existing VMs.
+
 Fields of `PUT /hosts/{hid}/vms/{vmid}`. All are optional and only what is present is applied; the machine must be powered off.
 
 | Field | Meaning |
