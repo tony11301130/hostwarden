@@ -244,11 +244,7 @@ const GUEST_BY_IMAGE: [RegExp, string][] = [
               <clr-control-helper>Applied on first boot, including when custom user-data is supplied.</clr-control-helper>
             </clr-select-container>
             @if (ciNetwork.mode === 'static') {
-              <clr-input-container>
-                <label>Guest interface</label>
-                <input clrInput name="ciInterface" [(ngModel)]="ciNetwork.interfaceName" placeholder="ens192" required />
-                <clr-control-helper>The interface name inside the guest OS, such as ens192, ens160 or eth0. Must match your cloud image.</clr-control-helper>
-              </clr-input-container>
+              <p>The network adapter is selected automatically. No guest interface name is needed.</p>
               <clr-input-container>
                 <label>IPv4 address</label>
                 <input clrInput name="ciAddress" [(ngModel)]="ciNetwork.address" placeholder="192.168.1.100" required />
@@ -425,7 +421,7 @@ const GUEST_BY_IMAGE: [RegExp, string][] = [
             <dd>{{ ciNetwork.mode === 'dhcp' ? 'Automatic (DHCP)' : 'Static IPv4' }}</dd>
             @if (ciNetwork.mode === 'static') {
               <dt>Guest interface</dt>
-              <dd>{{ ciNetwork.interfaceName.trim() }}</dd>
+              <dd>Automatic (primary network adapter)</dd>
               <dt>IPv4 address</dt>
               <dd>{{ ciNetwork.address.trim() }}</dd>
               <dt>Subnet mask / prefix</dt>
@@ -518,7 +514,6 @@ export class NewVmWizardComponent implements OnInit {
   protected ciUserData = '';
   protected ciNetwork: GuestNetworkSettings = {
     mode: 'dhcp',
-    interfaceName: '',
     address: '',
     subnet: '24',
     gateway: '',
@@ -640,7 +635,7 @@ export class NewVmWizardComponent implements OnInit {
   private cloudInit(): CloudInitConfig {
     const hostname = this.ciHostname.trim() || this.name.trim();
     const networkConfig = buildGuestNetworkConfig(this.ciNetwork);
-    const config: CloudInitConfig = { hostname, ...(networkConfig ? { network_config: networkConfig } : {}) };
+    const config: CloudInitConfig = { hostname, ...(networkConfig ? { network: networkConfig } : {}) };
     if (this.ciUserData.trim()) return { ...config, user_data: this.ciUserData };
     const keys = this.ciKeys
       .split('\n')

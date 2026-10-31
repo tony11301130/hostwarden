@@ -4,32 +4,26 @@ import { buildGuestNetworkConfig, guestNetworkError } from '../src/app/features/
 
 const settings = {
   mode: 'static',
-  interfaceName: 'ens192',
   address: '192.168.1.100',
   subnet: '24',
   gateway: '192.168.1.1',
   dns: '192.168.1.1, 1.1.1.1',
 };
 
-test('DHCP omits network-config, including stale invalid static fields', () => {
-  const dhcp = { ...settings, mode: 'dhcp', interfaceName: '', address: 'invalid', subnet: '' };
-  assert.equal(guestNetworkError(dhcp), null);
-  assert.equal(buildGuestNetworkConfig(dhcp), undefined);
+test('static IP does not require knowing the interface before the VM exists', () => {
+  assert.equal(guestNetworkError(settings), null);
 });
 
-test('static configuration uses a separate NoCloud v2 document with IPv4 default route and DNS', () => {
-  assert.equal(buildGuestNetworkConfig(settings), `version: 2
-ethernets:
-  "ens192":
-    dhcp4: false
-    addresses:
-      - "192.168.1.100/24"
-    routes:
-      - to: "0.0.0.0/0"
-        via: "192.168.1.1"
-    nameservers:
-      addresses: ["192.168.1.1","1.1.1.1"]
-`);
+test('DHCP omits network-config, including stale invalid static fields', () => {
+  const dhcp = { ...settings, mode: 'dhcp', address: 'invalid', subnet: '' };
+  assert.equal(guestNetworkError(dhcp), null);
+  assert.deepEqual(buildGuestNetworkConfig(dhcp), undefined);
+});
+
+test('static settings send CIDR, gateway and DNS for automatic NIC binding', () => {
+  assert.deepEqual(buildGuestNetworkConfig(settings), {
+    address: '192.168.1.100/24', gateway: '192.168.1.1', dns_servers: ['192.168.1.1', '1.1.1.1'],
+  });
 });
 
 test('all contiguous dotted masks produce the equivalent CIDR prefix', () => {
@@ -40,21 +34,20 @@ test('all contiguous dotted masks produce the equivalent CIDR prefix', () => {
     }).join('.');
     const values = { ...settings, address: '10.20.30.45', gateway: '' };
     const expected = buildGuestNetworkConfig({ ...values, subnet: String(prefix) });
-    assert.equal(buildGuestNetworkConfig({ ...values, subnet: `/${prefix}` }), expected);
-    assert.equal(buildGuestNetworkConfig({ ...values, subnet: mask }), expected);
+    assert.deepEqual(buildGuestNetworkConfig({ ...values, subnet: `/${prefix}` }), expected);
+    assert.deepEqual(buildGuestNetworkConfig({ ...values, subnet: mask }), expected);
   }
 });
 
 test('whitespace is trimmed and DNS accepts comma, space and newline separators', () => {
   const padded = Object.fromEntries(Object.entries(settings).map(([key, value]) => [key, key === 'mode' ? value : ` ${value} `]));
   padded.dns = ' 192.168.1.1,\n 1.1.1.1 ';
-  assert.equal(buildGuestNetworkConfig(padded), buildGuestNetworkConfig(settings));
+  assert.deepEqual(buildGuestNetworkConfig(padded), buildGuestNetworkConfig(settings));
 });
 
 test('isolated networks may omit the gateway and DNS', () => {
   const config = buildGuestNetworkConfig({ ...settings, gateway: ' ', dns: ' ' });
-  assert.doesNotMatch(config, /routes:|nameservers:/);
-  assert.match(config, /192\.168\.1\.100\/24/);
+  assert.deepEqual(config, { address: '192.168.1.100/24' });
 });
 
 test('31-bit point-to-point and 32-bit host addresses are allowed', () => {
@@ -63,8 +56,6 @@ test('31-bit point-to-point and 32-bit host addresses are allowed', () => {
 });
 
 const invalid = [
-  ['interfaceName', ''], ['interfaceName', 'lo'], ['interfaceName', 'en*'],
-  ['interfaceName', 'a'.repeat(16)], ['interfaceName', 'ens192:\ninvalid'],
   ['address', ''], ['address', '192.168.1.256'], ['address', '192.168.001.1'],
   ['address', '192.168.1.100/24'], ['address', '192.168.1.0'], ['address', '192.168.1.255'],
   ['address', '0.0.0.0'], ['address', '127.0.0.1'], ['address', '224.0.0.1'],

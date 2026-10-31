@@ -223,6 +223,13 @@ export interface CreateVmRequest {
   cloud_init?: CloudInitConfig;
 }
 
+/** Static IPv4 for the new VM's primary NIC; no guest interface name needed. */
+export interface CloudInitNetwork {
+  address: string;
+  gateway?: string;
+  dns_servers?: string[];
+}
+
 export interface CloudInitConfig {
   hostname?: string;
   ssh_authorized_keys?: string[];
@@ -230,6 +237,8 @@ export interface CloudInitConfig {
   packages?: string[];
   /** NoCloud network-config, applied independently of user_data. */
   network_config?: string;
+  /** Automatically bound to the new NIC; mutually exclusive with network_config. */
+  network?: CloudInitNetwork;
   /** Raw user-data: replaces generated user-data, but not network_config or metadata. */
   user_data?: string;
 }

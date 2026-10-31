@@ -1,7 +1,8 @@
+import type { CloudInitNetwork } from '../../core/models';
+
 /** IPv4 settings applied to one guest interface on its first boot. */
 export interface GuestNetworkSettings {
   mode: 'dhcp' | 'static';
-  interfaceName: string;
   address: string;
   subnet: string;
   gateway: string;
@@ -42,10 +43,6 @@ function dnsServers(value: string): string[] {
 
 export function guestNetworkError(settings: GuestNetworkSettings): string | null {
   if (settings.mode === 'dhcp') return null;
-  const name = settings.interfaceName.trim();
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,14}$/.test(name) || name === 'lo') {
-    return 'Enter the guest network interface name, for example ens192, ens160 or eth0.';
-  }
   const address = unicast(settings.address.trim());
   if (address === null) return 'Enter a valid unicast IPv4 address, for example 192.168.1.100.';
   const prefix = prefixLength(settings.subnet);
@@ -70,23 +67,15 @@ export function guestNetworkError(settings: GuestNetworkSettings): string | null
   return null;
 }
 
-/** NoCloud takes network-config separately from user-data; DHCP keeps its default behavior. */
-export function buildGuestNetworkConfig(settings: GuestNetworkSettings): string | undefined {
+/** The server binds these settings to the new VM's NIC before its first boot. */
+export function buildGuestNetworkConfig(settings: GuestNetworkSettings): CloudInitNetwork | undefined {
   if (settings.mode === 'dhcp') return undefined;
   const error = guestNetworkError(settings);
   if (error) throw new Error(error);
-  const lines = [
-    'version: 2',
-    'ethernets:',
-    `  ${JSON.stringify(settings.interfaceName.trim())}:`,
-    '    dhcp4: false',
-    '    addresses:',
-    `      - ${JSON.stringify(`${settings.address.trim()}/${prefixLength(settings.subnet)}`)}`,
-  ];
-  if (settings.gateway.trim()) {
-    lines.push('    routes:', '      - to: "0.0.0.0/0"', `        via: ${JSON.stringify(settings.gateway.trim())}`);
-  }
   const dns = dnsServers(settings.dns);
-  if (dns.length) lines.push('    nameservers:', `      addresses: ${JSON.stringify(dns)}`);
-  return lines.join('\n') + '\n';
+  return {
+    address: `${settings.address.trim()}/${prefixLength(settings.subnet)}`,
+    ...(settings.gateway.trim() ? { gateway: settings.gateway.trim() } : {}),
+    ...(dns.length ? { dns_servers: dns } : {}),
+  };
 }
